@@ -1,2 +1,2 @@
-# Parallax_website
- Parallax_website 视差滚动页 （HTML+CSS）
+# Split Landing Page
+ Split Landing Page分割页面(HTML+CSS+JAVASCRIPT)
