@@ -1,101 +1,104 @@
-// 获取DOM节点
-const balance = document.getElementById('balance');
-const money_plus = document.getElementById('money-plus');
-const money_minus = document.getElementById('money-minus');
-const list = document.getElementById('list');
-const form = document.getElementById('form');
-const text = document.getElementById('text');
-const amount = document.getElementById('amount');
+// 获取节点
+const musicContainer = document.getElementById("music-container");
+const playBtn = document.getElementById("play");
+const prevBtn = document.getElementById("prev");
+const nextBtn = document.getElementById("next");
 
-// 获取localStorage数据
-const localStorageTransactions = localStorage.getItem('transactions');
-let transactions = localStorageTransactions ? JSON.parse(localStorageTransactions) : [];
+const audio = document.getElementById("audio");
+const progress = document.getElementById("progress");
+const progressContainer = document.getElementById("progress-container");
+const title = document.getElementById("title");
+const cover = document.getElementById("cover");
 
-// 表单提交
-function addTransaction(e) {
-    // 阻止表单默认事件
-    e.preventDefault();
-    // 表单校验
-    if(text.value.trim() === '' || amount.value.trim() === ''){
-        alert("请输入交易名称和金额")
-    }else{
-        const transaction = {
-            id: generateID(),
-            text: text.value,
-            amount: +amount.value
-        };
-        transactions.push(transaction);
-        addTransactionDOM(transaction)
-        updateValues()
-        updateLocalStorage();
+// 歌曲名称
+const songs = ["hey", "summer", "ukulele"];
 
-        text.value = '';
-        amount.value = '';
+// 创建下标追踪歌曲
+let songIndex = 2;
+
+// 初始化页面时加载歌曲到DOM节点中
+loadsong(songs[songIndex]);
+
+// loadsong函数
+function loadsong(song) {
+    title.innerText = song;
+    audio.src = `music/${song}.mp3`;
+    cover.src = `images/${song}.jpg`;
+}
+
+//  playSong
+function playSong() {
+    musicContainer.classList.add("play");
+    playBtn.querySelector("i.fas").classList.remove("fa-play");
+    playBtn.querySelector("i.fas").classList.add("fa-pause");
+    audio.play();
+}
+
+// pauseSong
+function pauseSong() {
+    musicContainer.classList.remove("play");
+    playBtn.querySelector("i.fas").classList.add("fa-play");
+    playBtn.querySelector("i.fas").classList.remove("fa-pause");
+    audio.pause();
+}
+
+// prevSong
+function prevSong() {
+    songIndex--;
+    if (songIndex < 0) {
+        songIndex = songs.length - 1;
     }
+    loadsong(songs[songIndex]);
+    playSong();
 }
 
-// 创建generateID
-function generateID() {
-    return Math.floor(Math.random()*100000000)
+// nextSong
+function nextSong() {
+    songIndex++;
+    if (songIndex > songs.length - 1) {
+        songIndex = 0;
+    }
+    loadsong(songs[songIndex]);
+    playSong();
 }
 
-// 添加transaction交易到Dom节点
-function addTransactionDOM(transaction){
-    // 判断收入还是支出
-    const sign = transaction.amount < 0 ? '-' : '+';
-    // 创建li标签
-    const item  = document.createElement('li');
-    // 基于金额正负添加对应的类名
-    item.classList.add(transaction.amount < 0 ? 'minus' : 'plus');
-
-    item.innerHTML = `
-     ${transaction.text}
-     <span>${sign}${Math.abs(transaction.amount)}</span>
-     <button class="delete-btn" onclick="removeTransaction(${transaction.id})">X</button>   
-    `;
-    list.appendChild(item);
+// 设置updateProgress
+function updateProgress(e) {
+    const { duration, currentTime } = e.srcElement;
+    const progressPercent = (currentTime / duration) * 100;
+    progress.style.width = `${progressPercent}%`;
 }
 
-// 更新余额、收入、支出的金额
-function updateValues(){
-    // 通过map()获得交易金额数组
-    const amounts = transactions.map(transaction => transaction.amount);
-    // 余额
-    const total = amounts.reduce((acc,item) => (acc+item),0).toFixed(2);
-    // 收入
-    const income = amounts.filter(amount => amount > 0)
-        .reduce((acc,item) => (acc+item),0)
-        .toFixed(2);
-    // 支出
-    const expense = amounts.filter(amount => amount < 0)
-        .reduce((acc,item) => (acc+item),0)
-        .toFixed(2);
-    // 更新DOM
-    balance.innerText = `$${total}`;
-    money_plus.innerText = `$${income}`;
-    money_minus.innerText = `$${expense}`;
+// 设置setProgress
+function setProgress(e) {
+    const width = this.clientWidth;
+    //   console.log(width);
+    const clickX = e.offsetX;
+    //   console.log(clickX);
+    const duration = audio.duration;
+    audio.currentTime = (clickX / width) * duration;
 }
-
-// 删除记录
-function removeTransaction(id){
-    transactions = transactions.filter(transaction => transaction.id !== id);
-    updateLocalStorage();
-    init();
-}
-
-// 更新本地存储数据
-function updateLocalStorage() {
-    localStorage.setItem('transactions',JSON.stringify(transactions));
-}
-
-// 初始化应用
-function init(){
-    list.innerHTML = '';
-    transactions.forEach(transaction => addTransactionDOM(transaction));
-    updateValues()
-}
-
-init()
 
 // 事件监听
-form.addEventListener('submit',addTransaction);
+playBtn.addEventListener("click", () => {
+    const isPlaying = musicContainer.classList.contains("play");
+
+    if (isPlaying) {
+        pauseSong();
+    } else {
+        playSong();
+    }
+});
+
+// 切换歌曲
+prevBtn.addEventListener("click", prevSong);
+nextBtn.addEventListener("click", nextSong);
+
+// 更新进度条
+audio.addEventListener("timeupdate", updateProgress);
+
+// 点击进度条容器，更新歌曲播放
+progressContainer.addEventListener("click", setProgress);
+
+// 播放结束自动切换
+audio.addEventListener("ended", nextSong);
