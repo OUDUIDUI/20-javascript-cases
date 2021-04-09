@@ -1,104 +1,68 @@
 // 获取节点
-const musicContainer = document.getElementById("music-container");
-const playBtn = document.getElementById("play");
-const prevBtn = document.getElementById("prev");
-const nextBtn = document.getElementById("next");
+const postsContainer = document.getElementById('posts-container');
+const loading = document.querySelector('.loader');
+const filter = document.getElementById('filter');
 
-const audio = document.getElementById("audio");
-const progress = document.getElementById("progress");
-const progressContainer = document.getElementById("progress-container");
-const title = document.getElementById("title");
-const cover = document.getElementById("cover");
+let limit = 5;
+let page = 1;
 
-// 歌曲名称
-const songs = ["hey", "summer", "ukulele"];
-
-// 创建下标追踪歌曲
-let songIndex = 2;
-
-// 初始化页面时加载歌曲到DOM节点中
-loadsong(songs[songIndex]);
-
-// loadsong函数
-function loadsong(song) {
-    title.innerText = song;
-    audio.src = `music/${song}.mp3`;
-    cover.src = `images/${song}.jpg`;
+// fetch post from API
+async function getPosts() {
+    const res = await fetch(`http://jsonplaceholder.typicode.com/posts?_limit=${limit}&_page=${page}`);
+    return await res.json();
 }
 
-//  playSong
-function playSong() {
-    musicContainer.classList.add("play");
-    playBtn.querySelector("i.fas").classList.remove("fa-play");
-    playBtn.querySelector("i.fas").classList.add("fa-pause");
-    audio.play();
+// show posts in DOM
+async function showPosts() {
+    const posts = await getPosts();
+    posts.forEach(post => {
+        const postEl = document.createElement('div');
+        postEl.classList.add('post');
+        postEl.innerHTML = `
+            <div class="number">${post.id}</div>
+            <div class="post-info">
+                <h2 class="post-title">${post.title}</h2>
+                <p class="post-body">${post.body}</p>
+            </div>
+        `;
+        postsContainer.appendChild(postEl);
+    })
 }
 
-// pauseSong
-function pauseSong() {
-    musicContainer.classList.remove("play");
-    playBtn.querySelector("i.fas").classList.add("fa-play");
-    playBtn.querySelector("i.fas").classList.remove("fa-pause");
-    audio.pause();
+// showLoading
+async function showLoading() {
+    loading.classList.add('show');
+    page++;
+    await showPosts();
+    loading.classList.remove('show');
 }
 
-// prevSong
-function prevSong() {
-    songIndex--;
-    if (songIndex < 0) {
-        songIndex = songs.length - 1;
-    }
-    loadsong(songs[songIndex]);
-    playSong();
+// filterPosts
+function filterPosts(e) {
+    const term = e.target.value.toUpperCase();
+    const posts = document.querySelectorAll('.post');
+    posts.forEach(post =>{
+        const title = post.querySelector('.post-title').innerText.toUpperCase();
+        const body = post.querySelector('.post-body').innerText.toUpperCase();
+
+        if(title.indexOf(term) > -1 || body.indexOf(term) > -1){
+            post.style.display = 'flex';
+        }else {
+            post.style.display = 'none';
+        }
+    })
 }
 
-// nextSong
-function nextSong() {
-    songIndex++;
-    if (songIndex > songs.length - 1) {
-        songIndex = 0;
-    }
-    loadsong(songs[songIndex]);
-    playSong();
-}
-
-// 设置updateProgress
-function updateProgress(e) {
-    const { duration, currentTime } = e.srcElement;
-    const progressPercent = (currentTime / duration) * 100;
-    progress.style.width = `${progressPercent}%`;
-}
-
-// 设置setProgress
-function setProgress(e) {
-    const width = this.clientWidth;
-    //   console.log(width);
-    const clickX = e.offsetX;
-    //   console.log(clickX);
-    const duration = audio.duration;
-    audio.currentTime = (clickX / width) * duration;
-}
+showPosts();
 
 // 事件监听
-playBtn.addEventListener("click", () => {
-    const isPlaying = musicContainer.classList.contains("play");
+window.addEventListener('scroll',() => {
+    const {scrollTop,scrollHeight,clientHeight} = document.documentElement;
 
-    if (isPlaying) {
-        pauseSong();
-    } else {
-        playSong();
+    // 判断是否滚动到底部
+    if(scrollTop + clientHeight >= scrollHeight - 5){
+        showLoading();
     }
-});
+})
 
-// 切换歌曲
-prevBtn.addEventListener("click", prevSong);
-nextBtn.addEventListener("click", nextSong);
-
-// 更新进度条
-audio.addEventListener("timeupdate", updateProgress);
-
-// 点击进度条容器，更新歌曲播放
-progressContainer.addEventListener("click", setProgress);
-
-// 播放结束自动切换
-audio.addEventListener("ended", nextSong);
+filter.addEventListener('input',filterPosts);
