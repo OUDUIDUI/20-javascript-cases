@@ -1,114 +1,118 @@
-// 获取节点
-const wordEl = document.getElementById("word");
-const wrongLettersEl = document.getElementById("wrong-letters");
-const playAgainBtn = document.getElementById("play-button");
-const popup = document.getElementById("popup-container");
-const notification = document.getElementById("notification-container");
-const finalMessage = document.getElementById("final-message");
+// 获得节点
+const search = document.getElementById("search");
+const submit = document.getElementById("submit");
+const random = document.getElementById("random");
+const mealsEl = document.getElementById("meals");
+const resultHeading = document.getElementById("result-heading");
+const single_mealEl = document.getElementById("single-meal");
 
-const figureParts = document.querySelectorAll(".figure-part");
 
-const words = ["application", "programming", "interface", "wonder"];
+// 通过fetch API 获得食谱数据
+function searchMeal(e){
+    e.preventDefault();
 
-let selectedWord = words[Math.floor(Math.random() * words.length)];
+    // 清空single meal
+    single_mealEl.innerHTML = "";
 
-const correctLetters = [];
-const wrongLetters = [];
+    // 获取search输入框的值
+    const term = search.value;
+    
+    // 检查是否为空
+    if(term.trim()){
+        fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${term}`)
+            .then(res => res.json())
+            .then(data =>{
+                console.log(data);
+                if(data.meals === null){
+                    resultHeading.innerHTML = `<p>No results found</p>`;
+                }else{
+                    resultHeading.innerHTML = `<h2>Search results for '${term}'</h2>`;
+                    mealsEl.innerHTML = data.meals.map(meal => `
+                        <div class="meal">
+                            <img src="${meal.strMealThumb}" alt="${meal.strMeal}" />
+                            <div class="meal-info" data-mealId="${meal.idMeal}">
+                                <h3>${meal.strMeal}</h3>
+                            </div>
+                        </div>
+                    `).join('')
+                }
+            });
 
-// 显示单词函数
-function displayWord() {
-  wordEl.innerHTML = `
-    ${selectedWord
-      .split("")
-      .map(
-        letter => `
-        <span class="letter">
-        ${correctLetters.includes(letter) ? letter : ""}
-        </span>
-        `
-      )
-      .join("")}
+        // 清空搜索框
+        search.value = "";
+    }else{
+        alert("请输入搜索的内容")
+    }
+}
+
+// 获取食谱
+function getMealById(mealID) {
+    fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${mealID}`)
+      .then(res => res.json())
+      .then(data => {
+        const meal = data.meals[0];
+        addMealToDOM(meal);
+      });
+}
+
+// 获取随机食谱
+function getRandomMeal() {
+    mealsEl.innerHTML = "";
+    resultHeading.innerHTML = "";
+  
+    fetch(`https://www.themealdb.com/api/json/v1/1/random.php`)
+      .then(res => res.json())
+      .then(data => {
+        const meal = data.meals[0];
+        addMealToDOM(meal);
+      });
+}
+
+function addMealToDOM(meal) {
+    const ingredients = [];
+    for (let i = 1; i <= 20; i++) { 
+        if (meal[`strIngredient${i}`]) {
+            ingredients.push(
+                `${meal[`strIngredient${i}`]} - ${meal[`strMeasure${i}`]}`
+                );
+        } else {
+            break;
+        }
+    }
+
+    single_mealEl.innerHTML = `
+    <div class="single-meal">
+        <h1>${meal.strMeal}</h1>
+        <img src= "${meal.strMealThumb}" alt="${meal.strmeal}">
+        <div class="single-meal-info">
+            ${meal.strCategory ? `<p>${meal.strCategory}</p>` : ""}
+            ${meal.strArea ? `<p>${meal.strArea}</p>` : ""}
+        </div>
+        <div class="main">
+            <p>${meal.strInstructions}</p>
+            <h2>Ingredients</h2>
+            <ul>
+                ${ingredients.map(ing => `<li>${ing}</li>`).join("")}
+            </ul>
+        </div>
+    </div>
     `;
-  const innerWord = wordEl.innerText.replace(/\n/g, "");
-
-  if (innerWord === selectedWord) {
-    finalMessage.innerText = "恭喜你输入正确！ 😃";
-    popup.style.display = "flex";
-  }
 }
 
-// updateWrongLettersEl
-function updateWrongLettersEl() {
-  // 显示错误字母
-  wrongLettersEl.innerHTML = `
-    ${wrongLetters.length > 0 ? "<p>错误</p>" : ""}
-    ${wrongLetters.map(letter => `<span>${letter}</span>`)}
-  `;
+// 事件监听
+submit.addEventListener("submit", searchMeal);
+random.addEventListener("click", getRandomMeal);
 
-  // 显示火柴人身体
-  figureParts.forEach((part, index) => {
-    const errors = wrongLetters.length;
-
-    if (index < errors) {
-      part.style.display = "block";
-    } else {
-      part.style.display = "none";
+mealsEl.addEventListener("click", e => {
+    const mealInfo = e.path.find(item => {
+        if (item.classList) {
+            return item.classList.contains("meal-info");
+        } else {
+            return false;
+        }
+    });
+    if (mealInfo) {
+        const mealID = mealInfo.getAttribute("data-mealid");
+        getMealById(mealID);
     }
-  });
-
-  // 机会用完显示弹出框
-  if (wrongLetters.length === figureParts.length) {
-    finalMessage.innerText = "抱歉输入错误，游戏结束. 😕";
-    popup.style.display = "flex";
-  }
-}
-
-// showNotification函数
-function showNotification() {
-  notification.classList.add("show");
-
-  setTimeout(() => {
-    notification.classList.remove("show");
-  }, 3000);
-}
-// 按下键盘中的字母的事件监听
-window.addEventListener("keydown", e => {
-  // console.log(e.keyCode);
-  if (e.keyCode >= 65 && e.keyCode <= 90) {
-    const letter = e.key;
-
-    if (selectedWord.includes(letter)) {
-      if (!correctLetters.includes(letter)) {
-        correctLetters.push(letter);
-
-        displayWord();
-      } else {
-        showNotification();
-      }
-    } else {
-      if (!wrongLetters.includes(letter)) {
-        wrongLetters.push(letter);
-
-        updateWrongLettersEl();
-      } else {
-        showNotification();
-      }
-    }
-  }
 });
-
-//再玩一次按钮的事件监听
-playAgainBtn.addEventListener("click", () => {
-  correctLetters.splice(0);
-  wrongLetters.splice(0);
-
-  selectedWord = words[Math.floor(Math.random() * words.length)];
-
-  displayWord();
-
-  updateWrongLettersEl();
-
-  popup.style.display = "none";
-});
-
-displayWord();
