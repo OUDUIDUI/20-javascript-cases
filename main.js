@@ -1,68 +1,122 @@
 // 获取节点
-const postsContainer = document.getElementById('posts-container');
-const loading = document.querySelector('.loader');
-const filter = document.getElementById('filter');
+const word = document.getElementById("word");
+const text = document.getElementById("text");
+const scoreEl = document.getElementById("score");
+const timeEl = document.getElementById("time");
+const endgameEl = document.getElementById("end-game-container");
+const settingsBtn = document.getElementById("settings-btn");
+const settings = document.getElementById("settings");
+const settingsForm = document.getElementById("settings-form");
+const difficultySelect = document.getElementById("difficulty");
 
-let limit = 5;
-let page = 1;
+// 游戏单词
+const words = [
+    "sigh",
+    "tense",
+    "airplane",
+    "ball",
+    "pies",
+    "juice",
+    "warlike",
+    "bad",
+    "north",
+    "dependent",
+    "steer",
+    "silver",
+    "highfalutin",
+    "superficial",
+    "quince",
+    "eight",
+    "feeble",
+    "admit",
+    "drag",
+    "loving"
+];
 
-// fetch post from API
-async function getPosts() {
-    const res = await fetch(`http://jsonplaceholder.typicode.com/posts?_limit=${limit}&_page=${page}`);
-    return await res.json();
+// 初始单词（随机）
+let randomWord;
+
+// 初始得分
+let score = 0;
+
+// 初始时间
+let time = 10;
+
+// 难度选择
+let difficulty = localStorage.getItem('difficulty') || 'easy';
+
+// 更新难度选项
+difficultySelect.value = difficulty;
+
+// 聚焦到input输入框
+text.focus();
+
+// 倒计时
+const timeInterval = setInterval(updateTime,1000);
+
+// 设置随机产生单词
+function getRandomWord() {
+    return words[Math.floor(Math.random() * words.length)];
 }
 
-// show posts in DOM
-async function showPosts() {
-    const posts = await getPosts();
-    posts.forEach(post => {
-        const postEl = document.createElement('div');
-        postEl.classList.add('post');
-        postEl.innerHTML = `
-            <div class="number">${post.id}</div>
-            <div class="post-info">
-                <h2 class="post-title">${post.title}</h2>
-                <p class="post-body">${post.body}</p>
-            </div>
-        `;
-        postsContainer.appendChild(postEl);
-    })
+// 更新单词到DOM
+function addWordToDOM(){
+    randomWord = getRandomWord();
+    word.innerHTML = randomWord;
 }
 
-// showLoading
-async function showLoading() {
-    loading.classList.add('show');
-    page++;
-    await showPosts();
-    loading.classList.remove('show');
+// 更新得分
+function updateScore(){
+    score++;
+    scoreEl.innerHTML = score;
 }
 
-// filterPosts
-function filterPosts(e) {
-    const term = e.target.value.toUpperCase();
-    const posts = document.querySelectorAll('.post');
-    posts.forEach(post =>{
-        const title = post.querySelector('.post-title').innerText.toUpperCase();
-        const body = post.querySelector('.post-body').innerText.toUpperCase();
+// 更新剩余时间
+function updateTime(){
+    time--;
+    timeEl.innerHTML = `${time}s`
 
-        if(title.indexOf(term) > -1 || body.indexOf(term) > -1){
-            post.style.display = 'flex';
-        }else {
-            post.style.display = 'none';
-        }
-    })
+    if(time === 0){
+        // 游戏结束
+        clearInterval(timeInterval);
+        gameOver();
+    }
 }
 
-showPosts();
+// 提示游戏结束
+function gameOver(){
+    endgameEl.innerHTML = `
+        <h1>游戏结束</h1>
+        <p>您的最终得分${score}</p>
+        <button onclick="location.reload()">再玩一次</button>
+    `;
+    endgameEl.style.display = 'flex';
+}
+
+addWordToDOM();
 
 // 事件监听
-window.addEventListener('scroll',() => {
-    const {scrollTop,scrollHeight,clientHeight} = document.documentElement;
+text.addEventListener('input',e =>{
+    const insertedText = e.target.value;
 
-    // 判断是否滚动到底部
-    if(scrollTop + clientHeight >= scrollHeight - 5){
-        showLoading();
+    // 单词匹配
+    if(insertedText === randomWord){
+        addWordToDOM();
+        updateScore();
+        e.target.value = '';
+
+        time +=
+            difficulty === 'hard' ? 2 :
+                (difficulty === 'hard' ? 3 : 5);
+        updateTime();
     }
 })
 
-filter.addEventListener('input',filterPosts);
+settingsBtn.addEventListener('click',()=>{
+    settings.classList.toggle("hide");
+})
+
+settingsForm.addEventListener('change', e =>{
+    difficulty = e.target.value;
+    localStorage.setItem('difficulty',difficulty)
+})
